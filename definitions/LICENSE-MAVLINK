@@ -1,0 +1,18 @@
+The three XML files in this directory (common.xml, standard.xml, minimal.xml) are not the work of this
+repository's author. They are MAVLink message definitions from the MAVLink project
+(https://github.com/mavlink/mavlink), copied byte for byte from the package of the Rust crate `mavlink`
+version 0.21.0 (directory mavlink/message_definitions/v1.0/). Their SHA-256 values are in the README and
+are checked by tests/same_wire.rs.
+
+Licence of these files, as stated by the MAVLink project at https://mavlink.io/en/#license
+(read on 2026-11-12):
+
+    "The message definition XML files and the generated C-language version of MAVLink (a header-only
+    library) are made available under the MIT-licence."
+
+The licence file that ships next to these definitions in that package is reproduced unchanged as
+COPYING-MAVLINK in this directory. It covers the MAVLink generator ((L)GPL v3, which this repository
+does not contain or use) and grants the MIT licence for the generator's output.
+
+Neither that file nor the XML files name a copyright holder. If this repository is published, check the
+MAVLink project's current licence page first.

@@ -1,0 +1,22 @@
+[package]
+name = "marv-dialect"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "MIT"
+description = "MAVLink common dialect generated at build time with extension fields, for no_std targets, in lock-step with the std mavlink crate."
+
+[features]
+std = ["mavlink-core/std"]
+
+[dependencies]
+mavlink-core = { version = "=0.21.0", default-features = false, features = ["embedded"] }
+num-traits = { version = "0.2", default-features = false }
+num-derive = "0.5"
+bitflags = { version = "2", default-features = false }
+
+[build-dependencies]
+mavlink-bindgen = { version = "=0.21.0", default-features = false, features = ["mav2-message-extensions"] }
+
+[dev-dependencies]
+mavlink = { version = "=0.21.0", default-features = false, features = ["std", "serde", "dialect-common", "mav2-message-extensions"] }
