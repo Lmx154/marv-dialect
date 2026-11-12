@@ -13,7 +13,7 @@ The stock `mavlink` 0.21.0 crate cannot be built without `std` when extension fi
 From a `no_std` crate:
 
 ```toml
-marv-dialect = { git = "...", default-features = false }
+marv-dialect = { git = "https://github.com/Lmx154/marv-dialect.git", default-features = false }
 ```
 
 ```rust
