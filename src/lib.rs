@@ -38,6 +38,8 @@
 
 pub use mavlink_core::error::{MessageReadError, MessageWriteError, ParserError};
 pub use mavlink_core::types;
+#[cfg(feature = "serde")]
+pub use mavlink_core::utils;
 pub use mavlink_core::{
     MAVLinkV2MessageRaw, MavHeader, MavlinkVersion, Message, MessageData, calculate_crc,
 };

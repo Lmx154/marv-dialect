@@ -36,6 +36,10 @@ let bytes = frame.raw_bytes(); // ready to send
 
 From a `std` crate, switch on `features = ["std"]` (it only adds `mavlink-core/std`). There are no `dialect-*` features: both dialects, `common` and `marv`, are always built. For the target, `cargo tree -e normal --target thumbv8m.main-none-eabihf | grep -cE 'mavlink-bindgen|quick-xml|regex|mavlink v'` prints 0.
 
+## The `serde` feature
+
+`features = ["serde"]` (off by default) makes the generated messages, enums and bit flags derive `Serialize` and `Deserialize`, as the `serde` feature of the `mavlink` crate does for its dialects. A host program that inspects the fields of any message generically (`serde_json::to_value(message)`, for example a ground station's message view) needs it; flight firmware and other embedded users leave it off, and with it off the crate and its normal dependencies are the same as without the feature (no `serde` in `cargo tree -e normal --target thumbv8m.main-none-eabihf`). The feature switches on `std`, because `mavlink-core` 0.21 supports `serde` only with `std`: a `no_std` build with `serde` is not supported. A `MARV_TEST` message serialises to `{"type":"MARV_TEST","seq":7,"time_ms":1000,"value":-2,"tag":1}` (key order as serde_json sorts it); `tests/serde.rs` checks it.
+
 ## The `marv` dialect and `MARV_TEST`
 
 `definitions/marv.xml` includes `common.xml` and defines the project's own messages, with ids from the private range (42000 to 42999; this README gave no number, so 42420 from the owner's brief was taken, inside that range). `build.rs` generates it next to `common.xml`, so the crate has two modules: `marv_dialect::common`, unchanged (the module the other crates use, with the same wire format), and `marv_dialect::marv`, which holds every `common` message under the same ids and CRC seeds, plus the messages of `marv.xml`. Use `marv::MavMessage` as the message enum of a link that must carry both; use `common` where only `common` messages are needed.
