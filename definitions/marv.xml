@@ -2,6 +2,110 @@
 <mavlink>
   <include>common.xml</include>
   <version>3</version>
+  <enums>
+    <enum name="MARV_DEVICE">
+      <description>A device of the MARV V2 flight controller that reports its health in MARV_DEVICE_STATUS. 8 is not used.</description>
+      <entry value="1" name="MARV_DEVICE_IMU1">
+        <description>First inertial measurement unit.</description>
+      </entry>
+      <entry value="2" name="MARV_DEVICE_IMU2">
+        <description>Second inertial measurement unit.</description>
+      </entry>
+      <entry value="3" name="MARV_DEVICE_BARO">
+        <description>Barometer.</description>
+      </entry>
+      <entry value="4" name="MARV_DEVICE_MAG">
+        <description>Magnetometer.</description>
+      </entry>
+      <entry value="5" name="MARV_DEVICE_GNSS">
+        <description>GNSS receiver.</description>
+      </entry>
+      <entry value="6" name="MARV_DEVICE_BATT">
+        <description>Battery voltage and current measurement.</description>
+      </entry>
+      <entry value="7" name="MARV_DEVICE_RC">
+        <description>Radio control receiver.</description>
+      </entry>
+      <entry value="9" name="MARV_DEVICE_SD">
+        <description>SD card.</description>
+      </entry>
+      <entry value="10" name="MARV_DEVICE_PSRAM">
+        <description>External PSRAM.</description>
+      </entry>
+      <entry value="11" name="MARV_DEVICE_LED">
+        <description>Status LED.</description>
+      </entry>
+      <entry value="12" name="MARV_DEVICE_ESC">
+        <description>Electronic speed controller output.</description>
+      </entry>
+    </enum>
+    <enum name="MARV_DEVICE_STATE">
+      <description>The state of a device in MARV_DEVICE_STATUS.</description>
+      <entry value="0" name="MARV_DEVICE_STATE_ABSENT">
+        <description>The device did not answer its identity this boot.</description>
+      </entry>
+      <entry value="1" name="MARV_DEVICE_STATE_STARTING">
+        <description>The device is being started.</description>
+      </entry>
+      <entry value="2" name="MARV_DEVICE_STATE_OK">
+        <description>The device works.</description>
+      </entry>
+      <entry value="3" name="MARV_DEVICE_STATE_DEGRADED">
+        <description>The device works with errors.</description>
+      </entry>
+      <entry value="4" name="MARV_DEVICE_STATE_RECOVERING">
+        <description>The device is being restarted after an error.</description>
+      </entry>
+      <entry value="5" name="MARV_DEVICE_STATE_FAILED">
+        <description>The device failed and is not recovering.</description>
+      </entry>
+    </enum>
+    <enum name="MARV_DEVICE_ERROR">
+      <description>The last error of a device in MARV_DEVICE_STATUS.</description>
+      <entry value="0" name="MARV_DEVICE_ERROR_NONE">
+        <description>No error since boot.</description>
+      </entry>
+      <entry value="1" name="MARV_DEVICE_ERROR_BUS">
+        <description>A bus transfer failed.</description>
+      </entry>
+      <entry value="2" name="MARV_DEVICE_ERROR_TIMEOUT">
+        <description>The device did not answer in time.</description>
+      </entry>
+      <entry value="3" name="MARV_DEVICE_ERROR_ID_MISMATCH">
+        <description>The device identity is not the expected one.</description>
+      </entry>
+      <entry value="4" name="MARV_DEVICE_ERROR_CONFIG_MISMATCH">
+        <description>The device configuration read back differs from the one written.</description>
+      </entry>
+      <entry value="5" name="MARV_DEVICE_ERROR_POR">
+        <description>The device reset itself (power-on reset seen).</description>
+      </entry>
+      <entry value="6" name="MARV_DEVICE_ERROR_STUCK">
+        <description>The device delivers no new samples.</description>
+      </entry>
+    </enum>
+    <enum name="MARV_DEVICE_ACTION">
+      <description>The action of MAV_CMD_MARV_DEVICE.</description>
+      <entry value="1" name="MARV_DEVICE_ACTION_RESTART">
+        <description>Restart the device.</description>
+      </entry>
+      <entry value="2" name="MARV_DEVICE_ACTION_SELF_TEST">
+        <description>Run the self-test of the device.</description>
+      </entry>
+    </enum>
+    <enum name="MAV_CMD">
+      <entry value="42430" name="MAV_CMD_MARV_DEVICE">
+        <description>Restart or self-test one device.</description>
+        <param index="1" enum="MARV_DEVICE">Device.</param>
+        <param index="2" enum="MARV_DEVICE_ACTION">Action.</param>
+        <param index="3">Empty.</param>
+        <param index="4">Empty.</param>
+        <param index="5">Empty.</param>
+        <param index="6">Empty.</param>
+        <param index="7">Empty.</param>
+      </entry>
+    </enum>
+  </enums>
   <messages>
     <message id="42420" name="MARV_TEST">
       <description>A link test message with no meaning to a vehicle. The flight controller and the ground station send it to each other to show that a message outside the common dialect passes the radio link. Not a command, not telemetry.</description>
@@ -9,6 +113,22 @@
       <field type="uint32_t" name="time_ms" units="ms">The sender's clock in milliseconds.</field>
       <field type="int32_t" name="value">Any test value.</field>
       <field type="uint8_t" name="tag">The sender's role: 1 = flight controller, 2 = ground station.</field>
+    </message>
+    <message id="42421" name="MARV_DEVICE_STATUS">
+      <description>The health of one device of the flight controller; the flight controller sends one message per device, and the counters are since boot and wrap.</description>
+      <field type="uint32_t" name="time_boot_ms" units="ms">Time since boot of the flight controller when the row was made.</field>
+      <field type="uint32_t" name="samples">Samples (or readings) delivered by the device since boot.</field>
+      <field type="uint32_t" name="errors">Failed transfers or reads since boot.</field>
+      <field type="uint32_t" name="timeouts">Reads that timed out since boot.</field>
+      <field type="uint16_t" name="last_sample_age_ms" units="ms">Age of the last sample in milliseconds, saturating; 65535 = no sample yet.</field>
+      <field type="uint16_t" name="recoveries">Recoveries of the device since boot.</field>
+      <field type="uint16_t" name="attempts">Restart attempts since boot.</field>
+      <field type="uint16_t" name="overflows">Samples lost to a full buffer since boot.</field>
+      <field type="uint16_t" name="config_restored">Times the device configuration was written again since boot.</field>
+      <field type="uint8_t" name="device_id" enum="MARV_DEVICE">The device this row is about.</field>
+      <field type="uint8_t" name="state" enum="MARV_DEVICE_STATE">State of the device.</field>
+      <field type="uint8_t" name="last_error" enum="MARV_DEVICE_ERROR">The last error of the device.</field>
+      <field type="uint8_t" name="flags">Bit 0: the sample source is HIL. Bit 1: a self-test is running.</field>
     </message>
   </messages>
 </mavlink>

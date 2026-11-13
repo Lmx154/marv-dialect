@@ -1,6 +1,6 @@
 # marv-dialect
 
-The MAVLink `common` dialect for the MARV V2 flight controller, generated at build time with extension fields and usable without the standard library, and the `marv` dialect, which is `common` plus the project's own messages (so far one test message, `MARV_TEST`). The crate holds the message structs (`common::HIGHRES_IMU_DATA`, `common::HEARTBEAT_DATA`, ...), their ids, CRC seeds and `ser` / `deser`, and re-exports the `mavlink-core` items needed to frame them (`MAVLinkV2MessageRaw`, `MavHeader`, `MessageData`, `calculate_crc`, the error types). It has no code of its own.
+The MAVLink `common` dialect for the MARV V2 flight controller, generated at build time with extension fields and usable without the standard library, and the `marv` dialect, which is `common` plus the project's own messages (so far the test message `MARV_TEST` and the device diagnostics message `MARV_DEVICE_STATUS`, with its enums and one command). The crate holds the message structs (`common::HIGHRES_IMU_DATA`, `common::HEARTBEAT_DATA`, ...), their ids, CRC seeds and `ser` / `deser`, and re-exports the `mavlink-core` items needed to frame them (`MAVLinkV2MessageRaw`, `MavHeader`, `MessageData`, `calculate_crc`, the error types). It has no code of its own.
 
 **Status: version 0.1.0 (`publish = false`).**
 
@@ -72,9 +72,59 @@ frame.serialize_message_data(MavHeader::default(), &test);
 let bytes = frame.raw_bytes(); // ready to send
 ```
 
+## `MARV_DEVICE_STATUS`
+
+**Status: defined and host-tested (`tests/marv_device_status.rs`, `tests/same_wire.rs`, `tests/serde.rs`); not yet sent by any firmware.** The message is the health of one device of the flight controller, for the ground station: one row (one message) per device; every counter is since boot and wraps. The design is section 4 of `_plan/decision-foundation-20261113.md` (milestone FD1).
+
+| | |
+|---|---|
+| type | `marv_dialect::marv::MARV_DEVICE_STATUS_DATA` (enum variant `marv::MavMessage::MARV_DEVICE_STATUS`) |
+| id | 42421 (0x00A5B5) |
+| CRC_EXTRA | 231 (0xE7) |
+| payload | 30 bytes, fixed (no extension fields; trailing zero bytes are cut on the wire as in any MAVLink 2 frame) |
+
+| field | type | wire offset | meaning |
+|---|---|---|---|
+| `time_boot_ms` | `uint32_t` | 0 | the flight controller's time since boot, in milliseconds |
+| `samples` | `uint32_t` | 4 | samples delivered by the device since boot |
+| `errors` | `uint32_t` | 8 | failed transfers or reads since boot |
+| `timeouts` | `uint32_t` | 12 | reads that timed out since boot |
+| `last_sample_age_ms` | `uint16_t` | 16 | age of the last sample in milliseconds, saturating; 65535 = no sample yet |
+| `recoveries` | `uint16_t` | 18 | recoveries since boot |
+| `attempts` | `uint16_t` | 20 | restart attempts since boot |
+| `overflows` | `uint16_t` | 22 | samples lost to a full buffer since boot |
+| `config_restored` | `uint16_t` | 24 | times the device configuration was written again since boot |
+| `device_id` | `uint8_t`, `MARV_DEVICE` | 26 | the device the row is about |
+| `state` | `uint8_t`, `MARV_DEVICE_STATE` | 27 | state of the device |
+| `last_error` | `uint8_t`, `MARV_DEVICE_ERROR` | 28 | the last error of the device |
+| `flags` | `uint8_t` | 29 | bit 0: the sample source is HIL; bit 1: a self-test is running (a plain `uint8_t`, no bit mask enum) |
+
+The generated enum types (variants carry the XML names, for example `MarvDevice::MARV_DEVICE_IMU1`):
+
+| XML enum | Rust type | values |
+|---|---|---|
+| `MARV_DEVICE` | `marv::MarvDevice` | 1 `IMU1`, 2 `IMU2`, 3 `BARO`, 4 `MAG`, 5 `GNSS`, 6 `BATT`, 7 `RC`, 9 `SD`, 10 `PSRAM`, 11 `LED`, 12 `ESC` (8 is deliberately unused; 0 is not a device) |
+| `MARV_DEVICE_STATE` | `marv::MarvDeviceState` | 0 `ABSENT`, 1 `STARTING`, 2 `OK`, 3 `DEGRADED`, 4 `RECOVERING`, 5 `FAILED` |
+| `MARV_DEVICE_ERROR` | `marv::MarvDeviceError` | 0 `NONE`, 1 `BUS`, 2 `TIMEOUT`, 3 `ID_MISMATCH`, 4 `CONFIG_MISMATCH`, 5 `POR`, 6 `STUCK` |
+| `MARV_DEVICE_ACTION` | `marv::MarvDeviceAction` | 1 `RESTART`, 2 `SELF_TEST` |
+
+The entries are named `MARV_DEVICE_<name>`, `MARV_DEVICE_STATE_<name>`, `MARV_DEVICE_ERROR_<name>` and `MARV_DEVICE_ACTION_<name>`. Because the generated enums refuse a value that is not an entry, a message whose `device_id` is 0 or 8 (or whose `state` or `last_error` is out of range) does not decode: `deser` returns an error. `marv_dialect::common` does not contain any of this.
+
+## `MAV_CMD_MARV_DEVICE`
+
+**Status: defined and host-tested (`tests/marv_device_status.rs`); not yet sent or acted on by any firmware.** Command 42430, restart or self-test one device. `marv.xml` extends the `MAV_CMD` enum of `common.xml` with this one entry (the generator accepts that), so `marv::MavCmd::MAV_CMD_MARV_DEVICE` exists next to every `common` command, with the same values; `common::MavCmd` is unchanged.
+
+| param | meaning |
+|---|---|
+| 1 | the device: a `MARV_DEVICE` value |
+| 2 | the action: a `MARV_DEVICE_ACTION` value (1 restart, 2 self-test) |
+| 3 to 7 | unused (0) |
+
+It travels in `COMMAND_LONG` (`marv::COMMAND_LONG_DATA`, `command: MavCmd::MAV_CMD_MARV_DEVICE`); the parameters are floats on the wire, so `MarvDevice::from_f32(param1)` (`num_traits::FromPrimitive`) reads the device.
+
 ## Adding a message
 
-Add it to `definitions/marv.xml` with an id from the private range (42000 to 42999) that is not used yet. `build.rs` already generates that file next to `common.xml`. A message of `marv.xml` has no counterpart in the `mavlink` crate, so `tests/same_wire.rs` skips it: add its id and name to `OWN_MESSAGES` there, and test it in its own file, as `tests/marv_test.rs` does for `MARV_TEST`.
+Add it to `definitions/marv.xml` with an id from the private range (42000 to 42999) that is not used yet. `build.rs` already generates that file next to `common.xml`. A message of `marv.xml` has no counterpart in the `mavlink` crate, so `tests/same_wire.rs` skips it: add its id and name to `OWN_MESSAGES` there, and test it in its own file, as `tests/marv_test.rs` does for `MARV_TEST` and `tests/marv_device_status.rs` for `MARV_DEVICE_STATUS`.
 
 ## Lock-step
 

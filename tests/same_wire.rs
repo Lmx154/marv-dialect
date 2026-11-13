@@ -31,8 +31,9 @@ const VENDORED: [(&str, &str); 3] = [
 
 /// Messages of `definitions/marv.xml`. They exist only in this crate, so there is nothing to
 /// compare them with: the vendored list above (and so `xml_layouts`) does not read `marv.xml`, and
-/// `marv_dialect::common` does not contain them. `marv_test.rs` tests them.
-const OWN_MESSAGES: [(u32, &str); 1] = [(42420, "MARV_TEST")];
+/// `marv_dialect::common` does not contain them. `marv_test.rs` and `marv_device_status.rs` test
+/// them.
+const OWN_MESSAGES: [(u32, &str); 2] = [(42420, "MARV_TEST"), (42421, "MARV_DEVICE_STATUS")];
 
 fn definitions(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
