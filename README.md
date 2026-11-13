@@ -1,6 +1,6 @@
 # marv-dialect
 
-The MAVLink `common` dialect for the MARV V2 flight controller, generated at build time with extension fields and usable without the standard library. The crate holds the message structs (`common::HIGHRES_IMU_DATA`, `common::HEARTBEAT_DATA`, ...), their ids, CRC seeds and `ser` / `deser`, and re-exports the `mavlink-core` items needed to frame them (`MAVLinkV2MessageRaw`, `MavHeader`, `MessageData`, `calculate_crc`, the error types). It has no code of its own.
+The MAVLink `common` dialect for the MARV V2 flight controller, generated at build time with extension fields and usable without the standard library, and the `marv` dialect, which is `common` plus the project's own messages (so far one test message, `MARV_TEST`). The crate holds the message structs (`common::HIGHRES_IMU_DATA`, `common::HEARTBEAT_DATA`, ...), their ids, CRC seeds and `ser` / `deser`, and re-exports the `mavlink-core` items needed to frame them (`MAVLinkV2MessageRaw`, `MavHeader`, `MessageData`, `calculate_crc`, the error types). It has no code of its own.
 
 **Status: version 0.1.0 (`publish = false`).**
 
@@ -34,11 +34,43 @@ frame.serialize_message_data(MavHeader::default(), &imu);
 let bytes = frame.raw_bytes(); // ready to send
 ```
 
-From a `std` crate, switch on `features = ["std"]` (it only adds `mavlink-core/std`). There are no `dialect-*` features: the dialect is always `common`. For the target, `cargo tree -e normal --target thumbv8m.main-none-eabihf | grep -cE 'mavlink-bindgen|quick-xml|regex|mavlink v'` prints 0.
+From a `std` crate, switch on `features = ["std"]` (it only adds `mavlink-core/std`). There are no `dialect-*` features: both dialects, `common` and `marv`, are always built. For the target, `cargo tree -e normal --target thumbv8m.main-none-eabihf | grep -cE 'mavlink-bindgen|quick-xml|regex|mavlink v'` prints 0.
+
+## The `marv` dialect and `MARV_TEST`
+
+`definitions/marv.xml` includes `common.xml` and defines the project's own messages, with ids from the private range (42000 to 42999; this README gave no number, so 42420 from the owner's brief was taken, inside that range). `build.rs` generates it next to `common.xml`, so the crate has two modules: `marv_dialect::common`, unchanged (the module the other crates use, with the same wire format), and `marv_dialect::marv`, which holds every `common` message under the same ids and CRC seeds, plus the messages of `marv.xml`. Use `marv::MavMessage` as the message enum of a link that must carry both; use `common` where only `common` messages are needed.
+
+**`MARV_TEST` is a test message.** It is a link test message with no meaning to a vehicle: the flight controller and the ground station send it to each other over the radio link to show that a message outside the common dialect passes. Nothing acts on it.
+
+| | |
+|---|---|
+| type | `marv_dialect::marv::MARV_TEST_DATA` (enum variant `marv::MavMessage::MARV_TEST`) |
+| id | 42420 (0x00A5B4) |
+| CRC_EXTRA | 100 (0x64) |
+| payload | 13 bytes |
+
+| field | type | wire offset | meaning |
+|---|---|---|---|
+| `seq` | `uint32_t` | 0 | counter that the sender increments by one per message |
+| `time_ms` | `uint32_t` | 4 | the sender's clock in milliseconds |
+| `value` | `int32_t` | 8 | any test value |
+| `tag` | `uint8_t` | 12 | the sender's role: 1 = flight controller, 2 = ground station |
+
+There are no extension fields. As in every MAVLink 2 frame, trailing zero bytes of the payload are cut on the wire (at least one byte is kept) and read back as zero. `tests/marv_test.rs` checks the payload bytes, the CRC_EXTRA (computed there by hand), the cut and the equality of the `common` part of `marv` with `common`.
+
+```rust
+use marv_dialect::marv::MARV_TEST_DATA;
+use marv_dialect::{MAVLinkV2MessageRaw, MavHeader};
+
+let test = MARV_TEST_DATA { seq: 1, time_ms: 1000, value: -2, tag: 1 };
+let mut frame = MAVLinkV2MessageRaw::new();
+frame.serialize_message_data(MavHeader::default(), &test);
+let bytes = frame.raw_bytes(); // ready to send
+```
 
 ## Adding a message
 
-Add `definitions/marv.xml` that starts with `<include>common.xml</include>`, give the new messages ids from the private range, and generate it in `build.rs` next to `common.xml`. A new message has no counterpart in the `mavlink` crate, so `tests/same_wire.rs` must be told to skip it.
+Add it to `definitions/marv.xml` with an id from the private range (42000 to 42999) that is not used yet. `build.rs` already generates that file next to `common.xml`. A message of `marv.xml` has no counterpart in the `mavlink` crate, so `tests/same_wire.rs` skips it: add its id and name to `OWN_MESSAGES` there, and test it in its own file, as `tests/marv_test.rs` does for `MARV_TEST`.
 
 ## Lock-step
 
@@ -54,7 +86,7 @@ The flight controller (this crate) and the ground station (the `mavlink` crate) 
 | `standard.xml` | `fd57e0f3e767821310ba51384faeb6d7a6141f279cecfffe6c7c14b9385569ca` |
 | `minimal.xml` | `7bbf84456396089cf4dd9661ebe94e48a81009c047e826ed2778b4b9be60145c` |
 
-Only `common.xml` is generated; it includes the other two.
+`common.xml` and `marv.xml` are generated (`marv.xml` is this crate's own file and is not in this table); `common.xml` includes the other two.
 
 ## Licence
 

@@ -29,6 +29,11 @@ const VENDORED: [(&str, &str); 3] = [
     ),
 ];
 
+/// Messages of `definitions/marv.xml`. They exist only in this crate, so there is nothing to
+/// compare them with: the vendored list above (and so `xml_layouts`) does not read `marv.xml`, and
+/// `marv_dialect::common` does not contain them. `marv_test.rs` tests them.
+const OWN_MESSAGES: [(u32, &str); 1] = [(42420, "MARV_TEST")];
+
 fn definitions(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("definitions")
@@ -358,6 +363,27 @@ fn theirs_ser(m: &theirs::MavMessage) -> Vec<u8> {
     let mut buf = [0u8; 300];
     let n = mavlink::Message::ser(m, mavlink::MavlinkVersion::V2, &mut buf);
     buf[..n].to_vec()
+}
+
+#[test]
+fn own_messages_are_skipped_because_the_mavlink_crate_has_no_counterpart() {
+    let layouts = xml_layouts();
+    for (id, name) in OWN_MESSAGES {
+        assert!(!layouts.contains_key(&id), "{name} is in a vendored file");
+        assert!(
+            <ours::MavMessage as marv_dialect::Message>::default_message_from_id(id).is_none(),
+            "{name} is in marv_dialect::common"
+        );
+        assert!(
+            <theirs::MavMessage as mavlink::Message>::default_message_from_id(id).is_none(),
+            "{name} is in the mavlink crate"
+        );
+        assert!(
+            <marv_dialect::marv::MavMessage as marv_dialect::Message>::default_message_from_id(id)
+                .is_some(),
+            "{name} is not in marv_dialect::marv"
+        );
+    }
 }
 
 #[test]

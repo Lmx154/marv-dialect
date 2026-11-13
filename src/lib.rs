@@ -18,13 +18,12 @@
 //! assert_eq!(back.id, 2);
 //! ```
 //!
-//! # Adding a message later
+//! # The `marv` dialect
 //!
-//! Put a `marv.xml` next to the three vendored files in `definitions/`, start it with
-//! `<include>common.xml</include>`, define the new messages with ids from the private range, and
-//! generate it in `build.rs` in the same way as `common.xml`. A new message exists only here, so
-//! the lock-step test in `tests/same_wire.rs` must be told that it has no counterpart in the
-//! `mavlink` crate.
+//! `definitions/marv.xml` includes `common.xml` and adds the project's own messages, so far the link
+//! test message `MARV_TEST` (id 42420, CRC_EXTRA 100, `marv::MARV_TEST_DATA`). It is generated in
+//! `build.rs` as the module `marv`, next to `common`, which stays as it is. A message of `marv.xml`
+//! exists only here, so the lock-step test in `tests/same_wire.rs` skips it (`OWN_MESSAGES`).
 //!
 //! # Lock-step
 //!

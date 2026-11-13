@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<mavlink>
+  <include>common.xml</include>
+  <version>3</version>
+  <messages>
+    <message id="42420" name="MARV_TEST">
+      <description>A link test message with no meaning to a vehicle. The flight controller and the ground station send it to each other to show that a message outside the common dialect passes the radio link. Not a command, not telemetry.</description>
+      <field type="uint32_t" name="seq">Counter that the sender increments by one per message.</field>
+      <field type="uint32_t" name="time_ms" units="ms">The sender's clock in milliseconds.</field>
+      <field type="int32_t" name="value">Any test value.</field>
+      <field type="uint8_t" name="tag">The sender's role: 1 = flight controller, 2 = ground station.</field>
+    </message>
+  </messages>
+</mavlink>
