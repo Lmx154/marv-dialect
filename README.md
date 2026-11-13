@@ -44,7 +44,7 @@ From a `std` crate, switch on `features = ["std"]` (it only adds `mavlink-core/s
 
 `definitions/marv.xml` includes `common.xml` and defines the project's own messages, with ids from the private range (42000 to 42999; this README gave no number, so 42420 from the owner's brief was taken, inside that range). `build.rs` generates it next to `common.xml`, so the crate has two modules: `marv_dialect::common`, unchanged (the module the other crates use, with the same wire format), and `marv_dialect::marv`, which holds every `common` message under the same ids and CRC seeds, plus the messages of `marv.xml`. Use `marv::MavMessage` as the message enum of a link that must carry both; use `common` where only `common` messages are needed.
 
-**`MARV_TEST` is a test message.** It is a link test message with no meaning to a vehicle: the flight controller and the ground station send it to each other over the radio link to show that a message outside the common dialect passes. Nothing acts on it.
+**`MARV_TEST` is a test message.** It is a link test message with no meaning to a vehicle: the flight controller and the ground station send it to each other over the radio link to show that a message outside the common dialect passes. Nothing acts on it. On 2026-11-13 it was carried both ways through an ExpressLRS 4.0.1 radio (TX backpack 1.5.9) between the MARV V2 board and the ground station: 193 of 202 received by the station (the 9 lost all in the first second of listening), 100 of 100 received by the board.
 
 | | |
 |---|---|
