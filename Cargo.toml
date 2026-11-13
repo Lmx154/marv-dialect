@@ -5,6 +5,11 @@ edition = "2024"
 publish = false
 license = "MIT"
 description = "MAVLink common dialect generated at build time with extension fields, for no_std targets, in lock-step with the std mavlink crate."
+repository = "https://github.com/Lmx154/marv-dialect"
+readme = "README.md"
+keywords = ["embedded", "no-std", "mavlink", "drone", "uav"]
+categories = ["embedded", "no-std", "encoding"]
+rust-version = "1.99"
 
 [features]
 std = ["mavlink-core/std"]

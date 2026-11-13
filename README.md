@@ -4,6 +4,10 @@ The MAVLink `common` dialect for the MARV V2 flight controller, generated at bui
 
 **Status: version 0.1.0 (`publish = false`).**
 
+## Works with
+
+The crate is pure: it does no I/O and names no HAL or MCU, so it works anywhere `mavlink-core` 0.21 (with its `embedded` feature) builds.
+
 ## Why it exists
 
 The stock `mavlink` 0.21.0 crate cannot be built without `std` when extension fields are on: its feature `mav2-message-extensions` switches on the optional normal dependency `mavlink-bindgen` (which pulls in `regex` and `quick-xml`). Without that feature `HIGHRES_IMU` has no `id` field, which the flight controller's sensor layout needs, and `COMMAND_ACK`, `GPS_RAW_INT`, `SCALED_PRESSURE` and `AUTOPILOT_VERSION` lose their extension fields too. This crate runs the same generator (`mavlink-bindgen` =0.21.0) as a build dependency only, over the vendored XML, and depends at run time on `mavlink-core` =0.21.0, `num-traits`, `num-derive` and `bitflags`.
